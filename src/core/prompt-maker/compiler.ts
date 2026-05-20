@@ -1,4 +1,5 @@
 import type { BlueprintQuestionnaire, DigitalProductQuestionnaire } from "@/core/prompt-maker/schemas";
+import { applyToolTargetAdapter } from "@/core/prompt-maker/adapters";
 
 export type ToolTarget = "chatgpt" | "claude" | "gemini";
 
@@ -85,13 +86,18 @@ export function compileBlueprintPrompt(questionnaire: BlueprintQuestionnaire, to
     }
   ];
 
-  const prompt = [
-    `# Business Blueprint Compiler Prompt (${toolTarget})`,
-    ...sections.map(renderSection),
-    renderGlobalOutputContract("business_blueprint", toolTarget)
-  ].join("\n\n---\n\n");
+  const baseCompiled: CompiledPromptOutput = {
+    flow: "business_blueprint",
+    toolTarget,
+    prompt: [
+      `# Business Blueprint Compiler Prompt (${toolTarget})`,
+      ...sections.map(renderSection),
+      renderGlobalOutputContract("business_blueprint", toolTarget)
+    ].join("\n\n---\n\n"),
+    sections
+  };
 
-  return { flow: "business_blueprint", toolTarget, prompt, sections };
+  return applyToolTargetAdapter(baseCompiled);
 }
 
 export function compileDigitalProductPrompt(questionnaire: DigitalProductQuestionnaire, toolTarget: ToolTarget): CompiledPromptOutput {
@@ -134,11 +140,16 @@ export function compileDigitalProductPrompt(questionnaire: DigitalProductQuestio
     }
   ];
 
-  const prompt = [
-    `# Digital Product Compiler Prompt (${toolTarget})`,
-    ...sections.map(renderSection),
-    renderGlobalOutputContract("digital_product", toolTarget)
-  ].join("\n\n---\n\n");
+  const baseCompiled: CompiledPromptOutput = {
+    flow: "digital_product",
+    toolTarget,
+    prompt: [
+      `# Digital Product Compiler Prompt (${toolTarget})`,
+      ...sections.map(renderSection),
+      renderGlobalOutputContract("digital_product", toolTarget)
+    ].join("\n\n---\n\n"),
+    sections
+  };
 
-  return { flow: "digital_product", toolTarget, prompt, sections };
+  return applyToolTargetAdapter(baseCompiled);
 }
