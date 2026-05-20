@@ -13,10 +13,10 @@ function createService(): GenerationService {
   });
 }
 
-export async function GET(request: Request, context: { params: { generationId: string } }): Promise<Response> {
+export async function GET(request: Request, context: { params: Promise<{ generationId: string }> }): Promise<Response> {
   try {
     const auth = requireAuth(request.headers);
-    const { generationId } = context.params;
+    const { generationId } = await context.params;
 
     const service = createService();
     const generation = await service.getById(generationId, auth.userId);
@@ -36,6 +36,7 @@ export async function GET(request: Request, context: { params: { generationId: s
     return NextResponse.json(
       {
         id: generation.id,
+        request_type: generation.requestType,
         project_id: generation.projectId,
         request_id: generation.requestId,
         status: generation.status,

@@ -2,6 +2,7 @@ import { ZodError } from "zod";
 import { NextResponse } from "next/server";
 import { getEnv } from "@/core/config/env";
 import { createGenerationService } from "@/core/http/generation-service-factory";
+import { buildDigitalProductPromptInput } from "@/core/prompt-maker/mapping";
 import { requireAuth } from "@/core/security/auth";
 import { enforceRateLimit } from "@/core/security/rate-limit";
 import { createDigitalProductPromptSchema } from "@/types/api";
@@ -15,14 +16,15 @@ export async function POST(request: Request): Promise<Response> {
     enforceRateLimit(`ip:${ip}`, env.RATE_LIMIT_REQUESTS_PER_MINUTE);
 
     const payload = createDigitalProductPromptSchema.parse(await request.json());
-    const prompt = JSON.stringify(payload.questionnaire);
+    const compiled = buildDigitalProductPromptInput(payload.questionnaire, payload.tool_target);
+
     const service = createGenerationService();
     const accepted = await service.submit({
       requestType: "prompt_product",
       projectId: payload.project_id,
       userId: auth.userId,
-      prompt,
-      inputContext: payload.questionnaire,
+      prompt: compiled.prompt,
+      inputContext: compiled.context,
       idempotencyKey: payload.idempotency_key
     });
 
@@ -32,8 +34,8 @@ export async function POST(request: Request): Promise<Response> {
       requestId: accepted.requestId,
       projectId: payload.project_id,
       userId: auth.userId,
-      prompt,
-      inputContext: payload.questionnaire,
+      prompt: compiled.prompt,
+      inputContext: compiled.context,
       idempotencyKey: payload.idempotency_key
     });
 
