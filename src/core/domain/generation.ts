@@ -1,14 +1,9 @@
-export type GenerationTaskType =
-  | "ebook"
-  | "template"
-  | "prompt_pack"
-  | "landing_copy"
-  | "custom";
+export type GenerationRequestType = "prompt_blueprint" | "prompt_product" | "website_maker";
 
 export interface GenerationRequestInput {
+  requestType: GenerationRequestType;
   projectId: string;
   userId: string;
-  taskType: GenerationTaskType;
   prompt: string;
   inputContext?: Record<string, unknown>;
   idempotencyKey?: string;
@@ -27,6 +22,7 @@ export interface NormalizedGenerationResult {
 
 export interface GenerationRecord {
   id: string;
+  requestType: GenerationRequestType;
   requestId: string;
   projectId: string;
   userId: string;

@@ -6,7 +6,7 @@ export class OpenAiProvider implements LlmProvider {
     const promptPreview = input.prompt.slice(0, 200);
 
     return {
-      outputText: `Stub output for task '${input.taskType}': ${promptPreview}`,
+      outputText: `Stub output for request '${input.requestType}': ${promptPreview}`,
       inputTokens: Math.ceil(input.prompt.length / 4),
       outputTokens: 120,
       totalTokens: Math.ceil(input.prompt.length / 4) + 120,

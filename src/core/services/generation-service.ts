@@ -1,5 +1,5 @@
 import { getEnv } from "@/core/config/env";
-import type { GenerationRecord } from "@/core/domain/generation";
+import type { GenerationRecord, GenerationRequestType } from "@/core/domain/generation";
 import { estimateCostUsd } from "@/core/observability/cost";
 import { logError, logInfo } from "@/core/observability/logger";
 import type { LlmProvider } from "@/core/providers/types";
@@ -7,9 +7,9 @@ import type { GenerationRepository, UsageRepository } from "@/core/repositories/
 import { moderatePrompt } from "@/core/security/moderation";
 
 interface RunGenerationInput {
+  requestType: GenerationRequestType;
   projectId: string;
   userId: string;
-  taskType: "ebook" | "template" | "prompt_pack" | "landing_copy" | "custom";
   prompt: string;
   inputContext?: Record<string, unknown>;
   idempotencyKey?: string;
@@ -26,25 +26,14 @@ export class GenerationService {
 
   public async submit(input: RunGenerationInput): Promise<{ generationId: string; requestId: string; status: "queued" }> {
     const env = getEnv();
-    if (input.prompt.length > env.MAX_PROMPT_CHARS) {
-      throw new Error("PROMPT_TOO_LARGE");
-    }
+    if (input.prompt.length > env.MAX_PROMPT_CHARS) throw new Error("PROMPT_TOO_LARGE");
 
     const moderation = moderatePrompt(input.prompt);
-    if (moderation.status === "blocked") {
-      throw new Error(moderation.reason ?? "MODERATION_BLOCKED");
-    }
+    if (moderation.status === "blocked") throw new Error(moderation.reason ?? "MODERATION_BLOCKED");
 
-    const request = await this.deps.generationRepository.createRequest({
-      projectId: input.projectId,
-      userId: input.userId,
-      taskType: input.taskType,
-      prompt: input.prompt,
-      inputContext: input.inputContext,
-      idempotencyKey: input.idempotencyKey
-    });
-
+    const request = await this.deps.generationRepository.createRequest(input);
     const seed = await this.deps.generationRepository.createGenerationSeed({
+      requestType: input.requestType,
       requestId: request.requestId,
       projectId: input.projectId,
       userId: input.userId,
@@ -61,21 +50,19 @@ export class GenerationService {
 
     try {
       const result = await this.deps.provider.generate({
+        requestType: input.requestType,
         projectId: input.projectId,
         userId: input.userId,
-        taskType: input.taskType,
         prompt: input.prompt,
         inputContext: input.inputContext,
         idempotencyKey: input.idempotencyKey
       });
 
-      const completed = await this.deps.generationRepository.markCompleted({
-        generationId: input.generationId,
-        result
-      });
+      const completed = await this.deps.generationRepository.markCompleted({ generationId: input.generationId, result });
 
       await this.deps.usageRepository.logUsage({
         generationId: completed.id,
+        requestType: input.requestType,
         requestId: input.requestId,
         userId: input.userId,
         providerName: result.providerName,
@@ -88,7 +75,7 @@ export class GenerationService {
         success: true
       });
 
-      logInfo("Generation completed", { generationId: completed.id, userId: input.userId });
+      logInfo("Generation completed", { generationId: completed.id, userId: input.userId, requestType: input.requestType });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Generation failed";
       await this.deps.generationRepository.markFailed({
@@ -101,6 +88,7 @@ export class GenerationService {
 
       await this.deps.usageRepository.logUsage({
         generationId: input.generationId,
+        requestType: input.requestType,
         requestId: input.requestId,
         userId: input.userId,
         providerName: env.LLM_PROVIDER,
@@ -113,7 +101,7 @@ export class GenerationService {
         success: false
       });
 
-      logError("Generation failed", { generationId: input.generationId, error: message });
+      logError("Generation failed", { generationId: input.generationId, error: message, requestType: input.requestType });
     }
   }
 

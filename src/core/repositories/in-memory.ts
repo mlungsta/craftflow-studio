@@ -1,15 +1,16 @@
 import { randomUUID } from "node:crypto";
-import type { GenerationRecord, NormalizedGenerationResult } from "@/core/domain/generation";
+import type { GenerationRecord, GenerationRequestInput, GenerationRequestType, NormalizedGenerationResult } from "@/core/domain/generation";
 import type { GenerationRepository, UsageRepository } from "@/core/repositories/types";
 
 const generationStore = new Map<string, GenerationRecord>();
 
 export class InMemoryGenerationRepository implements GenerationRepository {
-  public async createRequest(_input: import("@/core/domain/generation").GenerationRequestInput): Promise<{ requestId: string }> {
+  public async createRequest(_input: GenerationRequestInput): Promise<{ requestId: string }> {
     return { requestId: randomUUID() };
   }
 
   public async createGenerationSeed(input: {
+    requestType: GenerationRequestType;
     requestId: string;
     projectId: string;
     userId: string;
@@ -21,6 +22,7 @@ export class InMemoryGenerationRepository implements GenerationRepository {
 
     generationStore.set(generationId, {
       id: generationId,
+      requestType: input.requestType,
       requestId: input.requestId,
       projectId: input.projectId,
       userId: input.userId,

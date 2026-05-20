@@ -1,8 +1,9 @@
-import type { GenerationRecord, GenerationRequestInput, NormalizedGenerationResult } from "@/core/domain/generation";
+import type { GenerationRecord, GenerationRequestInput, GenerationRequestType, NormalizedGenerationResult } from "@/core/domain/generation";
 
 export interface GenerationRepository {
   createRequest(input: GenerationRequestInput): Promise<{ requestId: string }>;
   createGenerationSeed(input: {
+    requestType: GenerationRequestType;
     requestId: string;
     projectId: string;
     userId: string;
@@ -27,6 +28,7 @@ export interface GenerationRepository {
 export interface UsageRepository {
   logUsage(input: {
     generationId: string;
+    requestType: GenerationRequestType;
     requestId: string;
     userId: string;
     providerName: string;
