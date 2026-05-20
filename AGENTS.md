@@ -1,7 +1,14 @@
 # AGENTS.md
 
 ## Mission Lock
-This repository builds **Digital Maker AI** with a strict phased delivery model. The phase model is locked and must not be changed unless the user explicitly states a change request in writing.
+This repository builds **CraftFlow Studio** with a strict phased delivery model. The phase model is locked and must not be changed unless the user explicitly states a change request in writing.
+
+## Phase 1 Product Lock
+Phase 1 implementation is strictly limited to:
+1. Prompt Maker
+2. Website Maker
+
+All other tool modules are deferred and must not be implemented in Phase 1 without explicit user approval.
 
 ## Non-Deviation Rule
 - Do not deviate from the current phase scope.
@@ -26,7 +33,7 @@ If documents conflict, higher-priority document wins.
 ## Prompting Discipline for Codex
 All implementation prompts must include:
 1. Objective
-2. Phase + scope boundary
+2. Phase + scope boundary (`1A Prompt Maker` or `1B Website Maker`)
 3. In-scope files only
 4. Constraints (security, performance, cost)
 5. Output contract (diff or full file)
@@ -53,6 +60,7 @@ A task is complete only if:
 ## Change Control
 Any of these require explicit user approval:
 - Phase order change
+- Phase 1A/1B scope change
 - Major architecture change
 - Provider strategy change
 - Security model change
