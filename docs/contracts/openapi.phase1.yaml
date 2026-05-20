@@ -1,12 +1,12 @@
 openapi: 3.1.0
 info:
-  title: Digital Maker AI Phase 1 API
-  version: 1.0.0-phase1
+  title: CraftFlow Studio Phase 1 API
+  version: 1.1.0-phase1ab
   description: >-
-    Phase 1 contract for authentication, project management, generation workflow,
-    generation history, and usage/cost telemetry.
+    Phase 1A/1B contract for Prompt Maker and Website Maker workflows,
+    including auth, projects, generation status, and usage telemetry.
 servers:
-  - url: https://api.digitalmaker.ai
+  - url: https://api.craftflow.studio
 security:
   - bearerAuth: []
 paths:
@@ -107,28 +107,76 @@ paths:
       responses:
         '204':
           description: Project archived
-  /v1/generations:
+
+  /v1/prompt-maker/blueprint/generations:
     post:
-      summary: Submit generation request
+      summary: Submit Business Blueprint prompt generation
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateGenerationRequest'
+              $ref: '#/components/schemas/CreateBlueprintPromptRequest'
       responses:
         '202':
-          description: Generation accepted
+          description: Prompt generation accepted
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenerationAcceptedResponse'
         '422':
-          description: Moderation rejected or invalid request
+          description: Validation or moderation rejected
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/prompt-maker/digital-product/generations:
+    post:
+      summary: Submit Digital Product prompt generation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDigitalProductPromptRequest'
+      responses:
+        '202':
+          description: Prompt generation accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationAcceptedResponse'
+        '422':
+          description: Validation or moderation rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/website-maker/generations:
+    post:
+      summary: Submit Website Maker generation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWebsiteGenerationRequest'
+      responses:
+        '202':
+          description: Website generation accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationAcceptedResponse'
+        '422':
+          description: Validation or moderation rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /v1/generations/{generationId}:
     get:
       summary: Get generation by id
@@ -143,23 +191,7 @@ paths:
                 $ref: '#/components/schemas/Generation'
         '404':
           $ref: '#/components/responses/NotFound'
-  /v1/projects/{projectId}/generations:
-    get:
-      summary: List generations for project
-      parameters:
-        - $ref: '#/components/parameters/ProjectId'
-      responses:
-        '200':
-          description: Generation list
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Generation'
+
   /v1/usage/summary:
     get:
       summary: Get token and cost summary for current user
@@ -181,12 +213,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UsageSummary'
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
   parameters:
     ProjectId:
       name: projectId
@@ -202,6 +236,7 @@ components:
       schema:
         type: string
         format: uuid
+
   responses:
     NotFound:
       description: Resource not found
@@ -209,6 +244,7 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+
   schemas:
     CreateSessionRequest:
       type: object
@@ -220,6 +256,7 @@ components:
         password:
           type: string
           minLength: 8
+
     SessionResponse:
       type: object
       required: [token, expires_at]
@@ -229,6 +266,7 @@ components:
         expires_at:
           type: string
           format: date-time
+
     CreateProjectRequest:
       type: object
       required: [name]
@@ -240,6 +278,7 @@ components:
         description:
           type: string
           maxLength: 1000
+
     UpdateProjectRequest:
       type: object
       properties:
@@ -253,6 +292,7 @@ components:
         status:
           type: string
           enum: [active, archived]
+
     Project:
       type: object
       required: [id, user_id, name, status, created_at, updated_at]
@@ -276,27 +316,69 @@ components:
         updated_at:
           type: string
           format: date-time
-    CreateGenerationRequest:
+
+    CreateBlueprintPromptRequest:
       type: object
-      required: [project_id, task_type, prompt]
+      required: [project_id, tool_target, questionnaire]
       properties:
         project_id:
           type: string
           format: uuid
-        task_type:
+        tool_target:
           type: string
-          enum: [ebook, template, prompt_pack, landing_copy, custom]
-        prompt:
-          type: string
-          minLength: 5
-          maxLength: 20000
-        input_context:
+          enum: [chatgpt, claude, gemini]
+        questionnaire:
           type: object
           additionalProperties: true
         idempotency_key:
           type: string
           minLength: 8
           maxLength: 128
+
+    CreateDigitalProductPromptRequest:
+      type: object
+      required: [project_id, tool_target, questionnaire]
+      properties:
+        project_id:
+          type: string
+          format: uuid
+        tool_target:
+          type: string
+          enum: [chatgpt, claude, gemini]
+        questionnaire:
+          type: object
+          additionalProperties: true
+        idempotency_key:
+          type: string
+          minLength: 8
+          maxLength: 128
+
+    CreateWebsiteGenerationRequest:
+      type: object
+      required: [project_id, product_type, audience, color_theme, store_name]
+      properties:
+        project_id:
+          type: string
+          format: uuid
+        product_type:
+          type: string
+          maxLength: 100
+        audience:
+          type: string
+          maxLength: 200
+        color_theme:
+          type: string
+          maxLength: 100
+        store_name:
+          type: string
+          maxLength: 160
+        has_shopify_account:
+          type: boolean
+        idempotency_key:
+          type: string
+          minLength: 8
+          maxLength: 128
+
     GenerationAcceptedResponse:
       type: object
       required: [generation_id, status]
@@ -307,6 +389,7 @@ components:
         status:
           type: string
           enum: [queued, processing]
+
     Generation:
       type: object
       required:
@@ -324,9 +407,6 @@ components:
         status:
           type: string
           enum: [queued, processing, completed, failed, blocked]
-        moderation_status:
-          type: string
-          enum: [pending, approved, blocked]
         provider_name:
           type: string
         model_name:
@@ -343,6 +423,7 @@ components:
         updated_at:
           type: string
           format: date-time
+
     UsageSummary:
       type: object
       required: [total_requests, total_tokens, total_cost_usd]
@@ -363,6 +444,7 @@ components:
           type: number
           format: double
           minimum: 0
+
     ErrorResponse:
       type: object
       required: [error]

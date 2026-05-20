@@ -1,5 +1,5 @@
 -- 0001_phase1_init.sql
--- Phase 1 initial schema migration
+-- Phase 1 initial schema migration (Prompt Maker + Website Maker)
 
 BEGIN;
 
@@ -26,24 +26,55 @@ CREATE TABLE projects (
 );
 CREATE INDEX idx_projects_user_id_created_at ON projects(user_id, created_at DESC);
 
-CREATE TABLE generation_requests (
+CREATE TABLE prompt_blueprint_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES projects(id),
   user_id UUID NOT NULL REFERENCES users(id),
-  task_type TEXT NOT NULL,
-  prompt_text TEXT NOT NULL,
-  input_context JSONB,
+  tool_target TEXT NOT NULL CHECK (tool_target IN ('chatgpt', 'claude', 'gemini')),
+  questionnaire JSONB NOT NULL,
   idempotency_key TEXT,
   moderation_status TEXT NOT NULL DEFAULT 'pending' CHECK (moderation_status IN ('pending', 'approved', 'blocked')),
   moderation_reason TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, idempotency_key)
 );
-CREATE INDEX idx_generation_requests_project_created_at ON generation_requests(project_id, created_at DESC);
+CREATE INDEX idx_prompt_blueprint_requests_project_created_at ON prompt_blueprint_requests(project_id, created_at DESC);
+
+CREATE TABLE prompt_product_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id),
+  user_id UUID NOT NULL REFERENCES users(id),
+  tool_target TEXT NOT NULL CHECK (tool_target IN ('chatgpt', 'claude', 'gemini')),
+  questionnaire JSONB NOT NULL,
+  idempotency_key TEXT,
+  moderation_status TEXT NOT NULL DEFAULT 'pending' CHECK (moderation_status IN ('pending', 'approved', 'blocked')),
+  moderation_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, idempotency_key)
+);
+CREATE INDEX idx_prompt_product_requests_project_created_at ON prompt_product_requests(project_id, created_at DESC);
+
+CREATE TABLE website_generation_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id),
+  user_id UUID NOT NULL REFERENCES users(id),
+  product_type TEXT NOT NULL,
+  audience TEXT NOT NULL,
+  color_theme TEXT NOT NULL,
+  store_name TEXT NOT NULL,
+  has_shopify_account BOOLEAN,
+  idempotency_key TEXT,
+  moderation_status TEXT NOT NULL DEFAULT 'pending' CHECK (moderation_status IN ('pending', 'approved', 'blocked')),
+  moderation_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, idempotency_key)
+);
+CREATE INDEX idx_website_generation_requests_project_created_at ON website_generation_requests(project_id, created_at DESC);
 
 CREATE TABLE generations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  request_id UUID NOT NULL UNIQUE REFERENCES generation_requests(id),
+  request_type TEXT NOT NULL CHECK (request_type IN ('prompt_blueprint', 'prompt_product', 'website_maker')),
+  request_id UUID NOT NULL,
   project_id UUID NOT NULL REFERENCES projects(id),
   user_id UUID NOT NULL REFERENCES users(id),
   status TEXT NOT NULL CHECK (status IN ('queued', 'processing', 'completed', 'failed', 'blocked')),
@@ -55,7 +86,8 @@ CREATE TABLE generations (
   started_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (request_type, request_id)
 );
 CREATE INDEX idx_generations_project_created_at ON generations(project_id, created_at DESC);
 CREATE INDEX idx_generations_user_created_at ON generations(user_id, created_at DESC);
@@ -76,7 +108,8 @@ CREATE INDEX idx_artifacts_project_created_at ON artifacts(project_id, created_a
 CREATE TABLE usage_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   generation_id UUID NOT NULL REFERENCES generations(id),
-  request_id UUID NOT NULL REFERENCES generation_requests(id),
+  request_type TEXT NOT NULL CHECK (request_type IN ('prompt_blueprint', 'prompt_product', 'website_maker')),
+  request_id UUID NOT NULL,
   user_id UUID NOT NULL REFERENCES users(id),
   provider_name TEXT NOT NULL,
   model_name TEXT NOT NULL,

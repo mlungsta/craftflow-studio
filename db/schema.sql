@@ -1,4 +1,4 @@
--- Digital Maker AI Phase 1 baseline schema
+-- CraftFlow Studio Phase 1A/1B schema
 -- PostgreSQL 15+
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -22,28 +22,57 @@ CREATE TABLE IF NOT EXISTS projects (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_projects_user_id_created_at ON projects(user_id, created_at DESC);
 
-CREATE TABLE IF NOT EXISTS generation_requests (
+CREATE TABLE IF NOT EXISTS prompt_blueprint_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES projects(id),
   user_id UUID NOT NULL REFERENCES users(id),
-  task_type TEXT NOT NULL,
-  prompt_text TEXT NOT NULL,
-  input_context JSONB,
+  tool_target TEXT NOT NULL CHECK (tool_target IN ('chatgpt', 'claude', 'gemini')),
+  questionnaire JSONB NOT NULL,
   idempotency_key TEXT,
   moderation_status TEXT NOT NULL DEFAULT 'pending' CHECK (moderation_status IN ('pending', 'approved', 'blocked')),
   moderation_reason TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, idempotency_key)
 );
+CREATE INDEX IF NOT EXISTS idx_prompt_blueprint_requests_project_created_at ON prompt_blueprint_requests(project_id, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_generation_requests_project_created_at ON generation_requests(project_id, created_at DESC);
+CREATE TABLE IF NOT EXISTS prompt_product_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id),
+  user_id UUID NOT NULL REFERENCES users(id),
+  tool_target TEXT NOT NULL CHECK (tool_target IN ('chatgpt', 'claude', 'gemini')),
+  questionnaire JSONB NOT NULL,
+  idempotency_key TEXT,
+  moderation_status TEXT NOT NULL DEFAULT 'pending' CHECK (moderation_status IN ('pending', 'approved', 'blocked')),
+  moderation_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, idempotency_key)
+);
+CREATE INDEX IF NOT EXISTS idx_prompt_product_requests_project_created_at ON prompt_product_requests(project_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS website_generation_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id),
+  user_id UUID NOT NULL REFERENCES users(id),
+  product_type TEXT NOT NULL,
+  audience TEXT NOT NULL,
+  color_theme TEXT NOT NULL,
+  store_name TEXT NOT NULL,
+  has_shopify_account BOOLEAN,
+  idempotency_key TEXT,
+  moderation_status TEXT NOT NULL DEFAULT 'pending' CHECK (moderation_status IN ('pending', 'approved', 'blocked')),
+  moderation_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, idempotency_key)
+);
+CREATE INDEX IF NOT EXISTS idx_website_generation_requests_project_created_at ON website_generation_requests(project_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS generations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  request_id UUID NOT NULL UNIQUE REFERENCES generation_requests(id),
+  request_type TEXT NOT NULL CHECK (request_type IN ('prompt_blueprint', 'prompt_product', 'website_maker')),
+  request_id UUID NOT NULL,
   project_id UUID NOT NULL REFERENCES projects(id),
   user_id UUID NOT NULL REFERENCES users(id),
   status TEXT NOT NULL CHECK (status IN ('queued', 'processing', 'completed', 'failed', 'blocked')),
@@ -55,9 +84,9 @@ CREATE TABLE IF NOT EXISTS generations (
   started_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (request_type, request_id)
 );
-
 CREATE INDEX IF NOT EXISTS idx_generations_project_created_at ON generations(project_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_generations_user_created_at ON generations(user_id, created_at DESC);
 
@@ -72,13 +101,13 @@ CREATE TABLE IF NOT EXISTS artifacts (
   metadata JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_artifacts_project_created_at ON artifacts(project_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS usage_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   generation_id UUID NOT NULL REFERENCES generations(id),
-  request_id UUID NOT NULL REFERENCES generation_requests(id),
+  request_type TEXT NOT NULL CHECK (request_type IN ('prompt_blueprint', 'prompt_product', 'website_maker')),
+  request_id UUID NOT NULL,
   user_id UUID NOT NULL REFERENCES users(id),
   provider_name TEXT NOT NULL,
   model_name TEXT NOT NULL,
@@ -90,7 +119,6 @@ CREATE TABLE IF NOT EXISTS usage_logs (
   success BOOLEAN NOT NULL,
   recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_usage_logs_user_recorded_at ON usage_logs(user_id, recorded_at DESC);
 CREATE INDEX IF NOT EXISTS idx_usage_logs_generation_id ON usage_logs(generation_id);
 
@@ -106,6 +134,5 @@ CREATE TABLE IF NOT EXISTS audit_events (
   metadata JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_audit_events_user_created_at ON audit_events(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_events_event_type_created_at ON audit_events(event_type, created_at DESC);
