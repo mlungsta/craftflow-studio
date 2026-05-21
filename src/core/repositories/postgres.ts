@@ -125,6 +125,18 @@ export class PostgresGenerationRepository implements GenerationRepository {
     );
     return res.rows[0] ? mapGenerationRow(res.rows[0]) : null;
   }
+
+  public async listByProject(projectId: string, userId: string): Promise<GenerationRecord[]> {
+    const pool = getDbPool();
+    const res = await pool.query(
+      `SELECT id, request_type, request_id, project_id, user_id, status, provider_name, model_name, output_text, error_code, error_message, created_at, updated_at
+       FROM generations
+       WHERE project_id=$1 AND user_id=$2
+       ORDER BY created_at DESC`,
+      [projectId, userId]
+    );
+    return res.rows.map((r) => mapGenerationRow(r));
+  }
 }
 
 export class PostgresUsageRepository implements UsageRepository {

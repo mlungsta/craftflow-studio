@@ -85,6 +85,12 @@ export class InMemoryGenerationRepository implements GenerationRepository {
     if (!rec || rec.userId !== userId) return null;
     return rec;
   }
+
+  public async listByProject(projectId: string, userId: string): Promise<GenerationRecord[]> {
+    return Array.from(generationStore.values())
+      .filter((r) => r.projectId === projectId && r.userId === userId)
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  }
 }
 
 export class InMemoryUsageRepository implements UsageRepository {

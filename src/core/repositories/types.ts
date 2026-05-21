@@ -23,6 +23,7 @@ export interface GenerationRepository {
     errorMessage: string;
   }): Promise<void>;
   getById(generationId: string, userId: string): Promise<GenerationRecord | null>;
+  listByProject(projectId: string, userId: string): Promise<GenerationRecord[]>;
 }
 
 export interface UsageRepository {

@@ -2,8 +2,10 @@ import { getEnv } from "@/core/config/env";
 import type { GenerationRecord, GenerationRequestType } from "@/core/domain/generation";
 import { estimateCostUsd } from "@/core/observability/cost";
 import { logError, logInfo } from "@/core/observability/logger";
+import { pickModelForRequest } from "@/core/providers/routing-policy";
 import type { LlmProvider } from "@/core/providers/types";
 import type { GenerationRepository, UsageRepository } from "@/core/repositories/types";
+import { withRetry } from "@/core/reliability/retry";
 import { moderatePrompt } from "@/core/security/moderation";
 
 interface RunGenerationInput {
@@ -38,7 +40,7 @@ export class GenerationService {
       projectId: input.projectId,
       userId: input.userId,
       providerName: env.LLM_PROVIDER,
-      modelName: env.OPENAI_MODEL
+      modelName: pickModelForRequest(input.requestType)
     });
 
     return { generationId: seed.generationId, requestId: request.requestId, status: "queued" };
@@ -49,14 +51,18 @@ export class GenerationService {
     await this.deps.generationRepository.markProcessing(input.generationId);
 
     try {
-      const result = await this.deps.provider.generate({
-        requestType: input.requestType,
-        projectId: input.projectId,
-        userId: input.userId,
-        prompt: input.prompt,
-        inputContext: input.inputContext,
-        idempotencyKey: input.idempotencyKey
-      });
+      const result = await withRetry(
+        () =>
+          this.deps.provider.generate({
+            requestType: input.requestType,
+            projectId: input.projectId,
+            userId: input.userId,
+            prompt: input.prompt,
+            inputContext: input.inputContext,
+            idempotencyKey: input.idempotencyKey
+          }),
+        2
+      );
 
       const completed = await this.deps.generationRepository.markCompleted({ generationId: input.generationId, result });
 
@@ -81,7 +87,7 @@ export class GenerationService {
       await this.deps.generationRepository.markFailed({
         generationId: input.generationId,
         providerName: env.LLM_PROVIDER,
-        modelName: env.OPENAI_MODEL,
+        modelName: pickModelForRequest(input.requestType),
         errorCode: "GENERATION_FAILED",
         errorMessage: message
       });
@@ -92,7 +98,7 @@ export class GenerationService {
         requestId: input.requestId,
         userId: input.userId,
         providerName: env.LLM_PROVIDER,
-        modelName: env.OPENAI_MODEL,
+        modelName: pickModelForRequest(input.requestType),
         inputTokens: 0,
         outputTokens: 0,
         totalTokens: 0,
@@ -107,5 +113,9 @@ export class GenerationService {
 
   public async getById(generationId: string, userId: string): Promise<GenerationRecord | null> {
     return this.deps.generationRepository.getById(generationId, userId);
+  }
+
+  public async listByProject(projectId: string, userId: string): Promise<GenerationRecord[]> {
+    return this.deps.generationRepository.listByProject(projectId, userId);
   }
 }
