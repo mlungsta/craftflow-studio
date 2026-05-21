@@ -31,14 +31,14 @@ export class PostgresGenerationRepository implements GenerationRepository {
         `INSERT INTO prompt_blueprint_requests
           (id, project_id, user_id, tool_target, questionnaire, idempotency_key, moderation_status)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [requestId, input.projectId, input.userId, "chatgpt", JSON.stringify(input.inputContext ?? {}), input.idempotencyKey ?? null, "approved"]
+        [requestId, input.projectId, input.userId, input.toolTarget ?? "chatgpt", JSON.stringify(input.inputContext ?? {}), input.idempotencyKey ?? null, "approved"]
       );
     } else if (input.requestType === "prompt_product") {
       await pool.query(
         `INSERT INTO prompt_product_requests
           (id, project_id, user_id, tool_target, questionnaire, idempotency_key, moderation_status)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [requestId, input.projectId, input.userId, "chatgpt", JSON.stringify(input.inputContext ?? {}), input.idempotencyKey ?? null, "approved"]
+        [requestId, input.projectId, input.userId, input.toolTarget ?? "chatgpt", JSON.stringify(input.inputContext ?? {}), input.idempotencyKey ?? null, "approved"]
       );
     } else {
       await pool.query(

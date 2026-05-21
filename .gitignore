@@ -29,3 +29,7 @@ Thumbs.db
 # Runtime / temp
 *.tmp
 *.temp
+
+# Local research artifacts
+product_research_screenshot(1).jpg
+prompt-builder_screenshot.jpg

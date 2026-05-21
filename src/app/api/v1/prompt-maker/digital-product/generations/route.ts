@@ -23,6 +23,7 @@ export async function POST(request: Request): Promise<Response> {
       requestType: "prompt_product",
       projectId: payload.project_id,
       userId: auth.userId,
+      toolTarget: payload.tool_target,
       prompt: compiled.prompt,
       inputContext: compiled.context,
       idempotencyKey: payload.idempotency_key
@@ -34,6 +35,7 @@ export async function POST(request: Request): Promise<Response> {
       requestId: accepted.requestId,
       projectId: payload.project_id,
       userId: auth.userId,
+      toolTarget: payload.tool_target,
       prompt: compiled.prompt,
       inputContext: compiled.context,
       idempotencyKey: payload.idempotency_key

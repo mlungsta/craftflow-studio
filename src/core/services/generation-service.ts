@@ -12,6 +12,7 @@ interface RunGenerationInput {
   requestType: GenerationRequestType;
   projectId: string;
   userId: string;
+  toolTarget?: "chatgpt" | "claude" | "gemini";
   prompt: string;
   inputContext?: Record<string, unknown>;
   idempotencyKey?: string;
@@ -57,6 +58,7 @@ export class GenerationService {
             requestType: input.requestType,
             projectId: input.projectId,
             userId: input.userId,
+            toolTarget: input.toolTarget,
             prompt: input.prompt,
             inputContext: input.inputContext,
             idempotencyKey: input.idempotencyKey

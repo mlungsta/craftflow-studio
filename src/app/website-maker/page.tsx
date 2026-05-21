@@ -12,6 +12,9 @@ function pretty(value: unknown): string {
 export default function WebsiteMakerPage() {
   const [projectId, setProjectId] = useState(projectPlaceholder);
   const [userId, setUserId] = useState(uidPlaceholder);
+  const [token, setToken] = useState("");
+  const [email, setEmail] = useState("demo@craftflow.local");
+  const [password, setPassword] = useState("password123");
   const [storeName, setStoreName] = useState("Civil Templates Hub");
   const [audience, setAudience] = useState("Construction teams and consulting engineers");
   const [productType, setProductType] = useState("Spreadsheets");
@@ -19,11 +22,42 @@ export default function WebsiteMakerPage() {
   const [status, setStatus] = useState("idle");
   const [result, setResult] = useState<unknown>(null);
 
+  function authHeaders(): HeadersInit {
+    return token
+      ? { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+      : { "Content-Type": "application/json", "x-user-id": userId };
+  }
+
+  async function initSessionAndProject(): Promise<void> {
+    setStatus("auth");
+    const sessionRes = await fetch("/api/v1/auth/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
+    const session = await sessionRes.json();
+    setResult(session);
+    if (!sessionRes.ok) return;
+
+    setUserId(session.user_id);
+    setToken(session.token);
+
+    const projectRes = await fetch("/api/v1/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.token}` },
+      body: JSON.stringify({ name: "Website Maker Project", description: "Autocreated for testing" })
+    });
+    const project = await projectRes.json();
+    setResult({ session, project });
+    if (projectRes.ok && project.id) setProjectId(project.id);
+    setStatus(projectRes.ok ? "ready" : "failed");
+  }
+
   async function generate(): Promise<void> {
     setStatus("submitting");
     const res = await fetch("/api/v1/website-maker/generations", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-user-id": userId },
+      headers: authHeaders(),
       body: JSON.stringify({
         project_id: projectId,
         product_type: productType,
@@ -43,7 +77,7 @@ export default function WebsiteMakerPage() {
 
     for (let i = 0; i < 14; i += 1) {
       await new Promise((r) => setTimeout(r, 700));
-      const poll = await fetch(`/api/v1/generations/${data.generation_id}`, { headers: { "x-user-id": userId } });
+      const poll = await fetch(`/api/v1/generations/${data.generation_id}`, { headers: token ? { Authorization: `Bearer ${token}` } : { "x-user-id": userId } });
       const pollData = await poll.json();
       setResult(pollData);
       if (pollData?.status === "completed" || pollData?.status === "failed") {
@@ -56,7 +90,7 @@ export default function WebsiteMakerPage() {
   }
 
   async function loadHistory(): Promise<void> {
-    const res = await fetch(`/api/v1/projects/${projectId}/generations`, { headers: { "x-user-id": userId } });
+    const res = await fetch(`/api/v1/projects/${projectId}/generations`, { headers: token ? { Authorization: `Bearer ${token}` } : { "x-user-id": userId } });
     setResult(await res.json());
     setStatus("history");
   }
@@ -64,6 +98,11 @@ export default function WebsiteMakerPage() {
   return (
     <main style={{ padding: 30, maxWidth: 980, margin: "0 auto" }}>
       <h1>Website Maker</h1>
+      <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
+        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+        <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
+        <button onClick={initSessionAndProject}>Init Session + Project</button>
+      </div>
       <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
         <input value={projectId} onChange={(e) => setProjectId(e.target.value)} placeholder="Project UUID" />
         <input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="User UUID" />

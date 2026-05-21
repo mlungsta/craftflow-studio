@@ -18,7 +18,41 @@ export default function PromptMakerTestPage() {
 
   const [projectId, setProjectId] = useState(projectPlaceholder);
   const [userId, setUserId] = useState(uidPlaceholder);
+  const [token, setToken] = useState("");
+  const [email, setEmail] = useState("demo@craftflow.local");
+  const [password, setPassword] = useState("password123");
   const [toolTarget, setToolTarget] = useState("chatgpt");
+
+  function authHeaders(): HeadersInit {
+    return token
+      ? { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+      : { "Content-Type": "application/json", "x-user-id": userId };
+  }
+
+  async function initSessionAndProject(): Promise<void> {
+    setStatus("auth");
+    const sessionRes = await fetch("/api/v1/auth/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
+    const session = await sessionRes.json();
+    setResult(session);
+    if (!sessionRes.ok) return;
+
+    setUserId(session.user_id);
+    setToken(session.token);
+
+    const projectRes = await fetch("/api/v1/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.token}` },
+      body: JSON.stringify({ name: "Prompt Maker Project", description: "Autocreated for testing" })
+    });
+    const project = await projectRes.json();
+    setResult({ session, project });
+    if (projectRes.ok && project.id) setProjectId(project.id);
+    setStatus(projectRes.ok ? "ready" : "failed");
+  }
 
   async function submit(): Promise<void> {
     setStatus("submitting");
@@ -29,11 +63,7 @@ export default function PromptMakerTestPage() {
           project_id: projectId,
           tool_target: toolTarget,
           questionnaire: {
-            business: {
-              niche: "Civil engineering templates",
-              offer_type: "Template bundle",
-              monetization_model: "One-time payment"
-            },
+            business: { niche: "Civil engineering templates", offer_type: "Template bundle", monetization_model: "One-time payment" },
             audience: {
               target_audience: "Construction teams and consulting engineers",
               primary_pain_points: ["Slow proposal drafting", "Inconsistent calculations"],
@@ -44,11 +74,7 @@ export default function PromptMakerTestPage() {
               brand_tone: "Expert and practical",
               pricing_hint: "$49-$149"
             },
-            execution: {
-              launch_window_days: 30,
-              channels: ["LinkedIn", "Email list"],
-              constraints: ["Limited design capacity"]
-            }
+            execution: { launch_window_days: 30, channels: ["LinkedIn", "Email list"], constraints: ["Limited design capacity"] }
           }
         }
       : {
@@ -60,11 +86,7 @@ export default function PromptMakerTestPage() {
               product_topic: "Engineering proposal automation",
               transformation_goal: "Help engineers generate winning proposals in half the time."
             },
-            specs: {
-              format: "PDF + prompt library",
-              depth_level: "intermediate",
-              estimated_length: "45 pages"
-            },
+            specs: { format: "PDF + prompt library", depth_level: "intermediate", estimated_length: "45 pages" },
             audience: {
               target_audience: "Freelance and agency engineers",
               pain_points: ["Low conversion proposals", "Manual repetitive drafting"],
@@ -78,19 +100,9 @@ export default function PromptMakerTestPage() {
           }
         };
 
-    const endpoint = isBlueprint
-      ? "/api/v1/prompt-maker/blueprint/generations"
-      : "/api/v1/prompt-maker/digital-product/generations";
+    const endpoint = isBlueprint ? "/api/v1/prompt-maker/blueprint/generations" : "/api/v1/prompt-maker/digital-product/generations";
 
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-user-id": userId
-      },
-      body: JSON.stringify(payload)
-    });
-
+    const response = await fetch(endpoint, { method: "POST", headers: authHeaders(), body: JSON.stringify(payload) });
     const data = await response.json();
     setResult(data);
 
@@ -99,13 +111,9 @@ export default function PromptMakerTestPage() {
       return;
     }
 
-    setStatus("queued");
-
     for (let i = 0; i < 12; i += 1) {
       await new Promise((r) => setTimeout(r, 700));
-      const poll = await fetch(`/api/v1/generations/${data.generation_id}`, {
-        headers: { "x-user-id": userId }
-      });
+      const poll = await fetch(`/api/v1/generations/${data.generation_id}`, { headers: token ? { Authorization: `Bearer ${token}` } : { "x-user-id": userId } });
       const pollData = await poll.json();
       setResult(pollData);
       if (pollData?.status === "completed" || pollData?.status === "failed") {
@@ -117,43 +125,14 @@ export default function PromptMakerTestPage() {
     setStatus("processing");
   }
 
-  async function runQuality(): Promise<void> {
-    const payload = flow === "blueprint"
-      ? {
-          project_id: projectId,
-          tool_target: toolTarget,
-          questionnaire: {
-            business: { niche: "Civil engineering templates", offer_type: "Template bundle", monetization_model: "One-time payment" },
-            audience: { target_audience: "Construction teams", primary_pain_points: ["Slow drafting"], desired_outcomes: ["Faster delivery"] },
-            positioning: { unique_value_proposition: "Practical templates for engineering teams", brand_tone: "Practical", pricing_hint: "$49" },
-            execution: { launch_window_days: 30, channels: ["LinkedIn"], constraints: [] }
-          }
-        }
-      : {
-          project_id: projectId,
-          tool_target: toolTarget,
-          questionnaire: {
-            core: { product_type: "Prompt pack", product_topic: "Proposal automation", transformation_goal: "Faster proposals" },
-            specs: { format: "PDF", depth_level: "intermediate", estimated_length: "30 pages" },
-            audience: { target_audience: "Engineers", pain_points: ["Slow writing"], objections: [] },
-            outcomes: { deliverables: ["Prompt set"], call_to_action: "Run this in 1 week", compliance_notes: [] }
-          }
-        };
-
-    const endpoint = flow === "blueprint" ? "/api/v1/prompt-maker/blueprint/quality" : "/api/v1/prompt-maker/digital-product/quality";
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    setResult(data);
-    setStatus("quality");
-  }
-
   return (
     <main style={{ padding: 30, maxWidth: 980, margin: "0 auto" }}>
       <h1>Prompt Maker</h1>
+      <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
+        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+        <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
+        <button onClick={initSessionAndProject}>Init Session + Project</button>
+      </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         <button onClick={() => setFlow("blueprint")}>Business Blueprint</button>
         <button onClick={() => setFlow("digital-product")}>Digital Product</button>
@@ -167,10 +146,7 @@ export default function PromptMakerTestPage() {
           <option value="gemini">gemini</option>
         </select>
       </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        <button onClick={submit}>Generate</button>
-        <button onClick={runQuality}>Quality Score</button>
-      </div>
+      <button onClick={submit}>Generate</button>
       <div>Status: {status}</div>
       <pre style={{ whiteSpace: "pre-wrap", background: "#0f1a36", padding: 12, borderRadius: 8 }}>{pretty(result)}</pre>
     </main>

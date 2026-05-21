@@ -4,6 +4,7 @@ export interface GenerationRequestInput {
   requestType: GenerationRequestType;
   projectId: string;
   userId: string;
+  toolTarget?: "chatgpt" | "claude" | "gemini";
   prompt: string;
   inputContext?: Record<string, unknown>;
   idempotencyKey?: string;
