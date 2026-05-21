@@ -105,6 +105,24 @@ Add advanced capabilities and business-critical controls.
 - Billing and usage enforcement are accurate.
 - Platform can scale without architecture rewrite.
 
+## Phase 4: Launch and Operations at Scale
+### Goal
+Operationalize CraftFlow Studio for sustained growth, enterprise reliability, and controlled expansion.
+
+### Scope
+1. Production release orchestration (staging -> canary -> full rollout).
+2. Growth instrumentation (activation funnels, retention cohorts, value events).
+3. SRE hardening (SLOs, paging, runbooks, disaster recovery drills).
+4. Security/compliance uplift (key rotation, audit evidence, policy baselines).
+5. Commercial operations (billing reconciliation, churn analytics, support workflows).
+6. Expansion lanes (additional maker modules gated by ROI and reliability budgets).
+
+### Exit Criteria
+- Launch health metrics meet agreed SLO thresholds for 30 consecutive days.
+- Incident response and rollback procedures are proven in live drills.
+- Cost-to-revenue monitoring is automated and actionable.
+- Expansion roadmap is prioritized with data-backed sequencing.
+
 ## Change Management Rules
 1. No phase work starts before prior phase exit criteria are met or waived.
 2. Every new feature request must be mapped to a phase before implementation.

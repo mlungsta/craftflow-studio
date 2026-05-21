@@ -24,24 +24,25 @@ Control token spend while preserving senior-level output quality through determi
 - Request diffs by default.
 - Full files only for new files or major structural rewrites.
 
-## Phase Budgets (Initial Baseline)
+## Phase Budgets (Baseline)
 ### Phase 1 Budget
 - Total cap: 4,000,000 tokens
-- Allocation:
-  1. Architecture/spec refinement: 12%
-  2. Core backend implementation: 30%
-  3. Frontend implementation: 22%
-  4. Testing/validation: 16%
-  5. Debugging/rework reserve: 12%
-  6. Documentation/ops notes: 8%
 
 ### Phase 2 Budget
 - Total cap: 3,500,000 tokens
-- Allocation emphasizes reliability and UX hardening.
 
 ### Phase 3 Budget
 - Total cap: 5,000,000 tokens
-- Allocation emphasizes scale, multi-model routing, and billing controls.
+
+### Phase 4 Budget
+- Total cap: 4,500,000 tokens
+- Allocation:
+  1. Reliability/SRE hardening: 28%
+  2. Security/compliance implementation: 20%
+  3. Commercial operations and analytics: 18%
+  4. Product optimization experiments: 18%
+  5. Incident/rollback drills and docs: 10%
+  6. Reserve: 6%
 
 ## Task-Level Budgeting
 For each task, define:
@@ -57,29 +58,6 @@ If planned cap is exceeded by >20%, freeze and review root cause before continui
 2. Rewriting entire files for small changes.
 3. Re-litigating settled architecture decisions.
 4. Parallel changes without stable interface contracts.
-
-## Senior Prompt Templates (Condensed)
-### Template A: Architecture Decision
-- Objective
-- Current constraints
-- Alternatives (max 3)
-- Recommended option with tradeoffs
-- Decision output format
-
-### Template B: Implementation Task
-- Objective
-- Phase and scope boundary
-- Files in scope
-- Required changes
-- Tests to add/run
-- Return format (diff + rationale + validation)
-
-### Template C: Debugging Task
-- Symptom
-- Repro steps
-- Expected vs actual
-- Suspected root causes
-- Required proof for fix
 
 ## Quality Gates Before Closing Any Task
 1. Requirement traceability complete.
