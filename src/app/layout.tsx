@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
+import "@/app/globals.css";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, fontFamily: "Segoe UI, sans-serif", background: "#070f24", color: "#e8efff" }}>
+      <body>
         {children}
       </body>
     </html>

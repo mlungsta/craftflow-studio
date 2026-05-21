@@ -36,8 +36,11 @@ export default function WebsiteMakerPage() {
       body: JSON.stringify({ email, password })
     });
     const session = await sessionRes.json();
-    setResult(session);
-    if (!sessionRes.ok) return;
+    if (!sessionRes.ok) {
+      setResult(session);
+      setStatus("failed");
+      return;
+    }
 
     setUserId(session.user_id);
     setToken(session.token);
@@ -45,12 +48,16 @@ export default function WebsiteMakerPage() {
     const projectRes = await fetch("/api/v1/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.token}` },
-      body: JSON.stringify({ name: "Website Maker Project", description: "Autocreated for testing" })
+      body: JSON.stringify({ name: "Website Maker Project", description: "Session bootstrap project" })
     });
     const project = await projectRes.json();
     setResult({ session, project });
-    if (projectRes.ok && project.id) setProjectId(project.id);
-    setStatus(projectRes.ok ? "ready" : "failed");
+    if (projectRes.ok && project.id) {
+      setProjectId(project.id);
+      setStatus("ready");
+    } else {
+      setStatus("failed");
+    }
   }
 
   async function generate(): Promise<void> {
@@ -77,7 +84,9 @@ export default function WebsiteMakerPage() {
 
     for (let i = 0; i < 14; i += 1) {
       await new Promise((r) => setTimeout(r, 700));
-      const poll = await fetch(`/api/v1/generations/${data.generation_id}`, { headers: token ? { Authorization: `Bearer ${token}` } : { "x-user-id": userId } });
+      const poll = await fetch(`/api/v1/generations/${data.generation_id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : { "x-user-id": userId }
+      });
       const pollData = await poll.json();
       setResult(pollData);
       if (pollData?.status === "completed" || pollData?.status === "failed") {
@@ -90,33 +99,59 @@ export default function WebsiteMakerPage() {
   }
 
   async function loadHistory(): Promise<void> {
-    const res = await fetch(`/api/v1/projects/${projectId}/generations`, { headers: token ? { Authorization: `Bearer ${token}` } : { "x-user-id": userId } });
+    const res = await fetch(`/api/v1/projects/${projectId}/generations`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : { "x-user-id": userId }
+    });
     setResult(await res.json());
     setStatus("history");
   }
 
   return (
-    <main style={{ padding: 30, maxWidth: 980, margin: "0 auto" }}>
-      <h1>Website Maker</h1>
-      <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-        <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
-        <button onClick={initSessionAndProject}>Init Session + Project</button>
-      </div>
-      <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
-        <input value={projectId} onChange={(e) => setProjectId(e.target.value)} placeholder="Project UUID" />
-        <input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="User UUID" />
-        <input value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Store Name" />
-        <input value={audience} onChange={(e) => setAudience(e.target.value)} placeholder="Audience" />
-        <input value={productType} onChange={(e) => setProductType(e.target.value)} placeholder="Product Type" />
-        <input value={colorTheme} onChange={(e) => setColorTheme(e.target.value)} placeholder="Color Theme" />
-      </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        <button onClick={generate}>Generate Website Package</button>
-        <button onClick={loadHistory}>Load Project History</button>
-      </div>
-      <div>Status: {status}</div>
-      <pre style={{ whiteSpace: "pre-wrap", background: "#0f1a36", padding: 12, borderRadius: 8 }}>{pretty(result)}</pre>
+    <main className="app-shell">
+      <header className="topbar">
+        <div className="brand">Website Maker</div>
+        <div className="status">Status: {status}</div>
+      </header>
+
+      <section className="grid-2">
+        <article className="panel">
+          <h3>Session Bootstrap</h3>
+          <p>Create a valid user token and project context.</p>
+          <div className="controls">
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+            <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" type="password" />
+            <button className="primary" onClick={initSessionAndProject}>Init Session + Project</button>
+          </div>
+        </article>
+
+        <article className="panel">
+          <h3>Store Setup</h3>
+          <p>Define product profile and brand direction.</p>
+          <div className="controls">
+            <input value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Store Name" />
+            <input value={audience} onChange={(e) => setAudience(e.target.value)} placeholder="Audience" />
+            <input value={productType} onChange={(e) => setProductType(e.target.value)} placeholder="Product Type" />
+            <input value={colorTheme} onChange={(e) => setColorTheme(e.target.value)} placeholder="Color Theme" />
+          </div>
+        </article>
+      </section>
+
+      <section className="panel" style={{ marginTop: 16 }}>
+        <h3>Execution</h3>
+        <div className="controls">
+          <input value={projectId} onChange={(e) => setProjectId(e.target.value)} placeholder="Project UUID" />
+          <input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="User UUID" />
+          <div className="row">
+            <button className="accent" onClick={generate}>Generate Website Package</button>
+            <button onClick={loadHistory}>Load Project History</button>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel" style={{ marginTop: 16 }}>
+        <h3>Output</h3>
+        <pre className="code">{pretty(result)}</pre>
+      </section>
     </main>
   );
 }
